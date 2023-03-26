@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+
+    <!-- Bootstrap CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+      integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+      crossorigin="anonymous"
+    />
+
+    <title>Travel Wits</title>
+  </head>
+  <body class="container">
+    <h1>Travel Wits</h1>
+    <hr />
+    <!-- Form -->
+    <form action="/" method="GET">
+      <div class="row">
+        <div class="col-md-3">
+          <!-- Input for Source City -->
+          <div class="form-group">
+            <label for="fromCity">From City:</label>
+            <select class="form-control" id="fromCity" name="from" value=<%= from%> required>
+              <option value="none" selected disabled hidden>Select an Option</option>
+              <% CITIES.map(city => { %>
+              <option value=<%= city %>
+                <% if (city === from) { %>
+                selected
+                <% } %>
+                >
+                <%= city %>
+              </option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <!-- Input for Destination City -->
+          <div class="form-group">
+            <label for="toCity">To City:</label>
+            <select class="form-control" id="toCity" name="to" value=<%= to%> required>
+              <option value="none" selected disabled hidden>Select an Option</option>
+              <% CITIES.map(city => { %>
+              <option value=<%= city %>
+                <% if (city === to) { %>
+                selected
+                <% } %>
+                >
+                <%= city %>
+              </option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <!-- Input for user's budget -->
+          <div class="form-group">
+            <label for="budget">Budget:</label>
+            <input type="number" class="form-control" id="budget" name="budget" min="200" value=<%= budget %> required>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <!-- Input for Length of user's stay -->
+          <div class="form-group">
+            <label for="days">Days of Stay:</label>
+            <input type="number" class="form-control" id="days" name="days" value=<%= days %> required>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <select class="form-control" id="sortBy" name="sortBy" value=<%= sortBy %> required>
+            <option value="price"
+            <% if (sortBy === "price") { %>
+            selected
+            <% } %>>Best Price</option>
+            <option value="stars"
+            <% if (sortBy === "stars") { %>
+            selected
+            <% } %>
+            >Most Stars</option>
+            <option value="rating"
+            <% if (sortBy === "rating") { %>
+            selected
+            <% } %>
+            >Highest Rating</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <input type="submit" class="btn btn-primary my-3" value="Search">
+    </form>
+
+    <!-- Errors -->
+    <% if (from === to) { %>
+      <div class="alert alert-danger mt-3 " role="alert">
+        Please select different cities.
+      </div>
+    <% } %>
+
+    <% if (error) { %>
+      <div class="alert alert-danger mt-3" role="alert">
+        <%= error %>
+      </div>
+    <% } %>
+
+
+    <div class="container">
+      <% trips?.map(trip => { %>
+      <div class="border my-5">
+        <h3 class="mt-4 ml-4 border-bottom pb-4">Trip Cost: $<%= trip.totalCost %></h3>
+        <div class="row">
+        <!-- Source to Destination Flight -->
+        <div class="col-md-4">
+            <% if (trip.sourceFlight.from === from) { %>
+            <div class="my-2">
+              <div class="card-body">
+                <h5 class="card-title"><%= trip.sourceFlight.from %> to <%= trip.sourceFlight.to %></h5>
+                <hr />
+                <p class="card-text mb-1">
+                  <strong>Departure:</strong> <%= trip.sourceFlight.departure_time %>
+                </p>
+                <p class="card-text mb-1">
+                  <strong>Arrival:</strong> <%= trip.sourceFlight.arrival_time %>
+                </p>
+                <p class="card-text mb-1">
+                  <strong>Price:</strong> $<%= trip.sourceFlight.price %>
+                </p>
+                <% if (trip.sourceFlight.stops.length) { %>
+                  <p class="card-text mb-1">
+                    <strong>Stops:</strong> <%= trip.sourceFlight.stops %>
+                  </p>
+                <% } else { %>
+                  <p class="card-text text-success">
+                    <strong>Stops:</strong> None
+                  </p>
+                <% } %>
+              </div>
+            </div>
+            <% } %>
+        </div>
+
+        <!-- Hotel -->
+        <div class="col-md-4 border-left">
+            <div class="my-2">
+              <div class="card-body">
+                <h5 class="card-title"><%= trip.hotel.name %></h5>
+                <hr />
+                <p class="card-text mb-1">
+                  <strong>Address:</strong> <%= trip.hotel.address %>
+                </p>
+                <p class="card-text mb-1">
+                  <strong>Rating:</strong> <%= trip.hotel.rating %>
+                </p>
+                <p class="card-text mb-1">
+                  <strong>Stars:</strong> <%= trip.hotel.stars %>
+                </p>
+                <p class="card-text mb-1">
+                  <strong>Price:</strong> $<%= trip.hotel.price_per_night %> per night
+                </p>
+                <strong>Amenities:</strong>
+                <ol>
+                <% trip.hotel.amenities?.map(amenity => { %>
+                  <li class="card-text mb-1">
+                    <%= amenity %>
+                  </li>
+                <% }) %>
+              </ol>
+              </div>
+            </div>
+        </div>
+
+        <!-- Destination to Source Flight -->
+        <div class="col-md-4 border-left">
+            <% if (trip.destinationFlight.from === to) { %>
+            <div class="my-2">
+              <div class="card-body">
+                <h5 class="card-title"><%= trip.destinationFlight.from %> to <%= trip.destinationFlight.to %></h5>
+                <hr />
+                <p class="card-text mb-1">
+                  <strong>Departure:</strong> <%= trip.destinationFlight.departure_time %>
+                </p>
+                <p class="card-text mb-1">
+                  <strong>Arrival:</strong> <%= trip.destinationFlight.arrival_time %>
+                </p>
+                <p class="card-text mb-1">
+                  <strong>Price:</strong> $<%= trip.destinationFlight.price %>
+                </p>
+                <% if (trip.destinationFlight.stops.length) { %>
+                  <p class="card-text mb-1">
+                    <strong>Stops:</strong> <%= trip.destinationFlight.stops %>
+                  </p>
+                <% } else { %>
+                  <p class="card-text text-success">
+                    <strong>Stops:</strong> None
+                  </p>
+                <% } %>
+              </div>
+            </div>
+            <% } %>
+        </div>
+      </div>
+      </div>
+      <% }) %>
+    </div>
+
+    <script>
+      document.getElementById('fromCity').addEventListener('change', function() {
+        document.getElementById('toCity').value = 'none';
+        console.log(1)
+      });
+    </script>
+
+    <!-- Bootstrap scripts -->
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>
