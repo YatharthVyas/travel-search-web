@@ -9,10 +9,7 @@ const { CITIES, CITIES_MAP, HOTEL_AMENITIES } = require("../constants");
  * - from: the origin airport
  * - to: the destination airport
  * Returns:
- * - status: 200 on success
- * - content: list of flights matching the query parameters
- * - status: 400 if from, to, or date are not provided
- * - status: 500 if there is an error in the database
+ * - flights: list of flights matching the query parameters
  */
 exports.getFlights = async (from, to) => {
   try {
@@ -28,6 +25,25 @@ exports.getFlights = async (from, to) => {
     console.error(err);
     return [];
   }
+};
+
+/*
+ * GET /hotels
+ * Returns a list of hotels in the given city sorted by price
+ * Query Parameters:
+ * - to: the destination city
+ * - remainingBudget: the remaining budget after subtracting flight price
+ * Returns:
+ * - hotels: list of hotels matching the query parameters
+ *
+ */
+exports.getHotels = async (to, remainingBudget) => {
+  const hotels = await Hotels.find({
+    address: { $regex: CITIES_MAP[to], $options: "i" },
+    price_per_night: { $lte: remainingBudget },
+  }).sort({ ratings: -1, stars: -1, price_per_night: 1 });
+
+  return hotels;
 };
 
 // Get Hotel and Flights:
@@ -64,10 +80,7 @@ exports.getHotelAndFlights = async (req) => {
       (budget - sourceFlights[0].price - destinationFlights[0].price) / days;
 
     // get hotels in destination city sorted by price
-    const hotels = await Hotels.find({
-      address: { $regex: CITIES_MAP[to], $options: "i" },
-      price_per_night: { $lte: remainingBudget },
-    }).sort({ ratings: -1, stars: -1, price_per_night: 1 });
+    const hotels = await this.getHotels(to, remainingBudget);
 
     if (hotels.length == 0) {
       return { data: {}, error: "Please increase your budget" };
