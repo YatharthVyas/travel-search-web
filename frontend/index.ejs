@@ -102,16 +102,16 @@
     </form>
 
     <!-- Errors -->
-    <% if (from === to) { %>
-      <div class="alert alert-danger mt-3 " role="alert">
-        Please select different cities.
-      </div>
-    <% } %>
-
-    <% if (error) { %>
-      <div class="alert alert-danger mt-3" role="alert">
-        <%= error %>
-      </div>
+    <% if (from) { %>
+      <% if (from === to) { %>
+        <div class="alert alert-danger mt-3 " role="alert">
+          Please select different cities.
+        </div>
+      <% } else if (error) { %>
+        <div class="alert alert-danger mt-3" role="alert">
+          <%= error %>
+        </div>
+        <% } %>
     <% } %>
 
 
