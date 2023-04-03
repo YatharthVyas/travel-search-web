@@ -6,6 +6,8 @@ After taking the source, budget and duration of trip as input, the application w
 
 ### Functionality:
 
+![Wits](./screenshots/travelwits.gif)
+
 - `getFlights()`: Returns all flights to/from source to destination and destination to source. Optimization: We run a single query to get all these to and fro flights.
 - `getHotels()`: Returns all hotels in the destination city. Optimization: We limit the number of hotels fetched by capping the price with the remaining budget after booking the flight.
 - `getFlightsAndHotels()`: Returns best round trip flight and hotel combination for the given inputs. This calls the above two functions **only once** and then filters the results based on the budget and duration. All trip combinations are sorted based on the total score of the flight and hotel. The score is calculated as explained below:
