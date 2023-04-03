@@ -22,7 +22,6 @@ const flightSchema = new mongoose.Schema({
   to: {
     type: String,
     required: true,
-    index: true,
   },
   stops: {
     type: [String],
@@ -40,6 +39,11 @@ const flightSchema = new mongoose.Schema({
   arrival_time: {
     type: String,
     required: true,
+  },
+  score: {
+    type: Number,
+    required: true,
+    index: true,
   },
 });
 

@@ -7,18 +7,40 @@ const { CITIES, CITIES_MAP, HOTEL_AMENITIES } = require("../constants");
  * Returns a list of flights from the given origin to the given destination on the given date
  * Query Parameters:
  * - from: the origin airport
- * - to: the destination airport
  * Returns:
- * - flights: list of flights matching the query parameters
+ * - flights: dictionary of flights matching the query parameters grouped by destination
  */
-exports.getFlights = async (from, to) => {
+exports.getFlights = async (from) => {
   try {
-    const flights = await Flights.find({
-      $or: [
-        { $and: [{ from }, { to }] },
-        { $and: [{ from: to }, { to: from }] },
-      ],
-    }).sort({ price: 1 });
+    // get flights grouped by destination
+    const flights = await Flights.aggregate([
+      {
+        $match: {
+          $or: [{ from }, { to: from }],
+        },
+      },
+      {
+        $group: {
+          _id: "$from",
+          flights: {
+            $push: {
+              from: "$from",
+              to: "$to",
+              stops: "$stops",
+              price: "$price",
+              departure_time: "$departure_time",
+              arrival_time: "$arrival_time",
+              score: "$score",
+            },
+          },
+        },
+      },
+      {
+        $sort: {
+          "flights.price": 1,
+        },
+      },
+    ]);
 
     return flights;
   } catch (err) {
@@ -31,100 +53,108 @@ exports.getFlights = async (from, to) => {
  * GET /hotels
  * Returns a list of hotels in the given city sorted by price
  * Query Parameters:
- * - to: the destination city
+ * - from: the source city
  * - remainingBudget: the remaining budget after subtracting flight price
  * Returns:
  * - hotels: list of hotels matching the query parameters
  *
  */
-exports.getHotels = async (to, remainingBudget) => {
+exports.getHotels = async (from, remainingBudget) => {
   const hotels = await Hotels.find({
-    address: { $regex: CITIES_MAP[to], $options: "i" },
+    $nor: [{ address: { $regex: CITIES_MAP[from], $options: "i" } }],
     price_per_night: { $lte: remainingBudget },
-  }).sort({ ratings: -1, stars: -1, price_per_night: 1 });
+  }).sort({ score: -1 });
 
-  return hotels;
+  // group hotels by city:
+  const hotelsByCity = {};
+  hotels.forEach((hotel) => {
+    for (const city of CITIES) {
+      if (hotel.address.includes(CITIES_MAP[city])) {
+        if (hotelsByCity[city]) {
+          hotelsByCity[city].push(hotel);
+        } else {
+          hotelsByCity[city] = [hotel];
+        }
+      }
+    }
+  });
+
+  return hotelsByCity;
 };
 
 // Get Hotel and Flights:
 /*
- * First we get the flights from the origin to the destination
- * Then we get the hotels in the destination city sorted by price
- * Then we take the minimum price of both flights and subtract it
- * from our budget. We then filter out all hotels that are less
- * than the remaining budget. We then return the list of hotels
- *
  * Query Parameters:
  * - from: the origin airport
- * - to: the destination airport
+ * - days: duration of stay
  * - budget: the budget for the trip
  * Returns:
  * - status: 200 on success
  * - content: list of hotels and flights matching the query parameters
  */
 exports.getHotelAndFlights = async (req) => {
-  const { from, to, budget, days, sortBy } = req.query;
+  const { from, budget, days } = req.query;
 
-  const flights = await this.getFlights(from, to);
-  if (flights.length == 0) {
+  const flights = await this.getFlights(from);
+  if (flights.length == 0)
     return { data: {}, error: "Please increase your budget" };
-  }
 
+  const sourceFlights = {};
+  const destinationFlights = {};
+  let minDestinationPrice = Infinity;
+  let minSourceFlightPrice = Infinity;
+  flights.forEach((flight) => {
+    if (flight._id === from) {
+      for (const _flight of flight.flights) {
+        if (!sourceFlights[_flight.to]) sourceFlights[_flight.to] = [];
+        sourceFlights[_flight.to].push(_flight);
+        minSourceFlightPrice = Math.min(minSourceFlightPrice, _flight.price);
+      }
+    } else {
+      if (!destinationFlights[flight._id]) destinationFlights[flight._id] = [];
+      destinationFlights[flight._id].push(...flight.flights);
+      minDestinationPrice = Math.min(
+        minDestinationPrice,
+        flight.flights[0].price
+      );
+    }
+  });
+
+  const maxAvailableBudget =
+    (budget - minSourceFlightPrice + minDestinationPrice) / days;
   try {
-    // filtering can be done client-side to further improve performance
-    const sourceFlights = flights.filter((flight) => flight.from == from);
-    const destinationFlights = flights.filter((flight) => flight.from == to);
-
-    // get remaining budget after subtracting flight price
-    const remainingBudget =
-      (budget - sourceFlights[0].price - destinationFlights[0].price) / days;
-
     // get hotels in destination city sorted by price
-    const hotels = await this.getHotels(to, remainingBudget);
+    const hotels = await this.getHotels(from, maxAvailableBudget);
 
     if (hotels.length == 0) {
       return { data: {}, error: "Please increase your budget" };
     }
 
     const trips = [];
-
     // generate all possible trips using the flights and hotels
-    sourceFlights.forEach((sourceFlight) => {
-      destinationFlights.forEach((destinationFlight) => {
-        hotels.forEach((hotel) => {
-          const trip = {
-            sourceFlight,
-            destinationFlight,
-            hotel,
-            totalCost:
-              sourceFlight.price +
-              destinationFlight.price +
-              hotel.price_per_night * days,
-          };
-          if (trip.totalCost <= budget) trips.push(trip);
+    for (const destination of Object.keys(destinationFlights)) {
+      sourceFlights[destination].forEach((sourceFlight) => {
+        destinationFlights[destination].forEach((destinationFlight) => {
+          hotels[destination].forEach((hotel) => {
+            const trip = {
+              sourceFlight,
+              destinationFlight,
+              hotel,
+              totalCost:
+                sourceFlight.price +
+                destinationFlight.price +
+                hotel.price_per_night * days,
+              totalScore:
+                sourceFlight.score + destinationFlight.score + hotel.score,
+            };
+            if (trip.totalCost <= budget) trips.push(trip);
+          });
         });
       });
-    });
-
-    // sort trips
-    // can be done client-side to further improve performance
-    if (sortBy === "rating") {
-      trips.sort(
-        (a, b) =>
-          b.hotel.rating - a.hotel.rating ||
-          b.hotel.stars - a.hotel.stars ||
-          b.hotel.price_per_night - a.hotel.price_per_night
-      );
-    } else if (sortBy === "stars") {
-      trips.sort(
-        (a, b) =>
-          b.hotel.stars - a.hotel.stars ||
-          b.hotel.rating - a.hotel.rating ||
-          b.hotel.price_per_night - a.hotel.price_per_night
-      );
-    } else {
-      trips.sort((a, b) => a.totalCost - b.totalCost);
     }
+
+    // sort trips by score
+    trips.sort((a, b) => b.totalScore - a.totalScore);
 
     return { data: { trips } };
   } catch (err) {
@@ -173,16 +203,26 @@ exports.generateFlightsData = async (req, res) => {
             stops.push(randomCity);
           }
 
+          // calculate score = (length(stops) * -100) + (duration * -200) + (price * -0.1)
+          const duration =
+            (arrival_time.hour - departure_time.hour) * 60 + // hours to minutes
+            (arrival_time.minute - departure_time.minute); // minutes
+
+          const price = 200 + Math.floor(Math.random() * 1300); // random price between $200 and $1500
+
+          const score = stops.length * -100 + duration * -200 + price * -0.1;
+
           // generate flight document for mongoDB
           const flight = {
             from: fromCity,
             to: toCity,
             stops,
-            price: 200 + Math.floor(Math.random() * 1300), // random price between $200 and $1500
+            price,
             departure_time:
               String(departure_time.hour) + ":" + String(departure_time.minute),
             arrival_time:
               String(arrival_time.hour) + ":" + String(arrival_time.minute),
+            score,
           };
 
           flights.push(flight);
@@ -228,15 +268,22 @@ exports.generateHotelsData = async (req, res) => {
         }
       });
 
+      // calculate score = (rating * 50) + (stars * 20) + (price * -0.1)
+      const rating = Math.floor(Math.random() * 10) + 1; // random number between 1 and 10
+      const stars = Math.floor(Math.random() * 5) + 1; // random number between 1 and 5
+      const price_per_night = 50 + Math.floor(Math.random() * 200); // random price between $50 and $250
+      const score = rating * 50 + stars * 20 + price_per_night * -0.1;
+
       // generate random hotel document for mongoDB
       const hotel = {
         city,
         name: "Hotel " + String(i + 1),
         address: "Address " + String(i + 1) + ", " + CITIES_MAP[city],
-        stars: Math.floor(Math.random() * 5) + 1, // random number between 1 and 5
-        rating: Math.floor(Math.random() * 10) + 1, // random number between 1 and 10
+        stars,
+        rating,
         amenities,
-        price_per_night: 50 + Math.floor(Math.random() * 200), // random price between $50 and $250
+        price_per_night,
+        score,
       };
 
       hotels.push(hotel);

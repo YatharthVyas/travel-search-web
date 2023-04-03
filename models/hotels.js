@@ -47,6 +47,11 @@ const hotelSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
+  score: {
+    type: Number,
+    required: true,
+    index: true,
+  },
 });
 
 const Hotel = mongoose.model("Hotel", hotelSchema);

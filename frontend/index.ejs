@@ -44,25 +44,6 @@
         </div>
 
         <div class="col-md-3">
-          <!-- Input for Destination City -->
-          <div class="form-group">
-            <label for="toCity">To City:</label>
-            <select class="form-control" id="toCity" name="to" value=<%= to%> required>
-              <option value="none" selected disabled hidden>Select an Option</option>
-              <% CITIES.map(city => { %>
-              <option value=<%= city %>
-                <% if (city === to) { %>
-                selected
-                <% } %>
-                >
-                <%= city %>
-              </option>
-              <% }) %>
-            </select>
-          </div>
-        </div>
-
-        <div class="col-md-3">
           <!-- Input for user's budget -->
           <div class="form-group">
             <label for="budget">Budget:</label>
@@ -77,25 +58,6 @@
             <input type="number" class="form-control" id="days" name="days" value=<%= days %> required>
           </div>
         </div>
-
-        <div class="col-md-3">
-          <select class="form-control" id="sortBy" name="sortBy" value=<%= sortBy %> required>
-            <option value="price"
-            <% if (sortBy === "price") { %>
-            selected
-            <% } %>>Best Price</option>
-            <option value="stars"
-            <% if (sortBy === "stars") { %>
-            selected
-            <% } %>
-            >Most Stars</option>
-            <option value="rating"
-            <% if (sortBy === "rating") { %>
-            selected
-            <% } %>
-            >Highest Rating</option>
-          </select>
-        </div>
       </div>
     </div>
     <input type="submit" class="btn btn-primary my-3" value="Search">
@@ -103,11 +65,7 @@
 
     <!-- Errors -->
     <% if (from) { %>
-      <% if (from === to) { %>
-        <div class="alert alert-danger mt-3 " role="alert">
-          Please select different cities.
-        </div>
-      <% } else if (error) { %>
+      <% if (error) { %>
         <div class="alert alert-danger mt-3" role="alert">
           <%= error %>
         </div>
@@ -122,104 +80,93 @@
         <div class="row">
         <!-- Source to Destination Flight -->
         <div class="col-md-4">
-            <% if (trip.sourceFlight.from === from) { %>
-            <div class="my-2">
-              <div class="card-body">
-                <h5 class="card-title"><%= trip.sourceFlight.from %> to <%= trip.sourceFlight.to %></h5>
-                <hr />
+          <div class="my-2">
+            <div class="card-body">
+              <h5 class="card-title"><%= trip.sourceFlight.from %> to <%= trip.sourceFlight.to %></h5>
+              <hr />
+              <p class="card-text mb-1">
+                <strong>Departure:</strong> <%= trip.sourceFlight.departure_time %>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Arrival:</strong> <%= trip.sourceFlight.arrival_time %>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Price:</strong> $<%= trip.sourceFlight.price %>
+              </p>
+              <% if (trip.sourceFlight.stops.length) { %>
                 <p class="card-text mb-1">
-                  <strong>Departure:</strong> <%= trip.sourceFlight.departure_time %>
+                  <strong>Stops:</strong> <%= trip.sourceFlight.stops %>
                 </p>
-                <p class="card-text mb-1">
-                  <strong>Arrival:</strong> <%= trip.sourceFlight.arrival_time %>
+              <% } else { %>
+                <p class="card-text text-success">
+                  <strong>Stops:</strong> None
                 </p>
-                <p class="card-text mb-1">
-                  <strong>Price:</strong> $<%= trip.sourceFlight.price %>
-                </p>
-                <% if (trip.sourceFlight.stops.length) { %>
-                  <p class="card-text mb-1">
-                    <strong>Stops:</strong> <%= trip.sourceFlight.stops %>
-                  </p>
-                <% } else { %>
-                  <p class="card-text text-success">
-                    <strong>Stops:</strong> None
-                  </p>
-                <% } %>
-              </div>
+              <% } %>
             </div>
-            <% } %>
+          </div>
         </div>
 
         <!-- Hotel -->
         <div class="col-md-4 border-left">
-            <div class="my-2">
-              <div class="card-body">
-                <h5 class="card-title"><%= trip.hotel.name %></h5>
-                <hr />
-                <p class="card-text mb-1">
-                  <strong>Address:</strong> <%= trip.hotel.address %>
-                </p>
-                <p class="card-text mb-1">
-                  <strong>Rating:</strong> <%= trip.hotel.rating %>
-                </p>
-                <p class="card-text mb-1">
-                  <strong>Stars:</strong> <%= trip.hotel.stars %>
-                </p>
-                <p class="card-text mb-1">
-                  <strong>Price:</strong> $<%= trip.hotel.price_per_night %> per night
-                </p>
-                <strong>Amenities:</strong>
-                <ol>
+          <div class="my-2">
+            <div class="card-body">
+              <h5 class="card-title"><%= trip.hotel.name %></h5>
+              <hr />
+              <p class="card-text mb-1">
+                <strong>Address:</strong> <%= trip.hotel.address %>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Rating:</strong> <%= trip.hotel.rating %>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Stars:</strong> <%= trip.hotel.stars %>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Price:</strong> $<%= trip.hotel.price_per_night %> per night
+              </p>
+              <strong>Amenities:</strong>
+              <ol>
                 <% trip.hotel.amenities?.map(amenity => { %>
                   <li class="card-text mb-1">
                     <%= amenity %>
                   </li>
                 <% }) %>
               </ol>
-              </div>
             </div>
+          </div>
         </div>
 
         <!-- Destination to Source Flight -->
         <div class="col-md-4 border-left">
-            <% if (trip.destinationFlight.from === to) { %>
-            <div class="my-2">
-              <div class="card-body">
-                <h5 class="card-title"><%= trip.destinationFlight.from %> to <%= trip.destinationFlight.to %></h5>
-                <hr />
+          <div class="my-2">
+            <div class="card-body">
+              <h5 class="card-title"><%= trip.destinationFlight.from %> to <%= trip.destinationFlight.to %></h5>
+              <hr />
+              <p class="card-text mb-1">
+                <strong>Departure:</strong> <%= trip.destinationFlight.departure_time %>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Arrival:</strong> <%= trip.destinationFlight.arrival_time %>
+              </p>
+              <p class="card-text mb-1">
+                <strong>Price:</strong> $<%= trip.destinationFlight.price %>
+              </p>
+              <% if (trip.destinationFlight.stops.length) { %>
                 <p class="card-text mb-1">
-                  <strong>Departure:</strong> <%= trip.destinationFlight.departure_time %>
+                  <strong>Stops:</strong> <%= trip.destinationFlight.stops %>
                 </p>
-                <p class="card-text mb-1">
-                  <strong>Arrival:</strong> <%= trip.destinationFlight.arrival_time %>
+              <% } else { %>
+                <p class="card-text text-success">
+                  <strong>Stops:</strong> None
                 </p>
-                <p class="card-text mb-1">
-                  <strong>Price:</strong> $<%= trip.destinationFlight.price %>
-                </p>
-                <% if (trip.destinationFlight.stops.length) { %>
-                  <p class="card-text mb-1">
-                    <strong>Stops:</strong> <%= trip.destinationFlight.stops %>
-                  </p>
-                <% } else { %>
-                  <p class="card-text text-success">
-                    <strong>Stops:</strong> None
-                  </p>
-                <% } %>
-              </div>
+              <% } %>
             </div>
-            <% } %>
+          </div>
         </div>
       </div>
       </div>
       <% }) %>
     </div>
-
-    <script>
-      document.getElementById('fromCity').addEventListener('change', function() {
-        document.getElementById('toCity').value = 'none';
-        console.log(1)
-      });
-    </script>
 
     <!-- Bootstrap scripts -->
     <script
